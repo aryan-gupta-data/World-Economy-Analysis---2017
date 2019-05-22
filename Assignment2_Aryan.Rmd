@@ -1,0 +1,316 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+#ASSIGNMENT 2
+
+#New Research Question
+Initially, I wanted to analyze HAPPINESS of countries and find most significant features to predict HAPPINESS. Features available are FAMILY, LIFE EXPECTANCY, ECONOMY, GENEROSITY, TRUST IN GOVERNMENT and FREEDOM. After running predictive model (Mulitple Linear Regression) to find significant features, I came to a conclusion that all the features have very low P values, i.e. they all are very significant (as seen below).
+
+```{r, include=FALSE}
+
+#Installing Libraries
+
+#install.packages("data.table","compare","plyr","dplyr","lubridate","caTools","ggplot2","ggthemes","reshape2","corrgram","corrplot","formattable","cowplot","ggpubr","plot3D","highcharter","formattable","plotly","countrycode","maps","e1071","caret","MLmetrics","Metrics")
+
+#Importing Libraries
+library(data.table)
+library(compare)
+library(plyr)
+library(dplyr)
+library(lubridate)
+library(caTools)
+library(ggplot2)
+library(ggthemes)
+library(reshape2)
+library(corrgram)       
+library(corrplot)
+library(formattable)
+library(cowplot)
+library(ggpubr)
+library(plot3D)
+library(highcharter)
+library(formattable)
+library(plotly)
+library(countrycode)
+library(maps)
+library(e1071)
+library(caret)
+library(MLmetrics)
+library(Metrics)
+```
+
+```{r, include=FALSE}
+#Importing Datasets
+
+Happiness <- read.csv('2017_Happiness.csv') #Just working on 2017 Data now.
+```
+
+
+```{r, include=FALSE}
+####################### PREPROCESSING #######################
+
+#Renaming the Col Names
+colnames (Happiness) <- c("Country", "Happiness.Rank", "Happiness.Score",
+                          "Whisker.High", "Whisker.Low", "Economy", "Family",
+                          "Life.Expectancy", "Freedom", "Generosity",
+                          "Trust", "Dystopia.Residual")
+
+#Removing Whisker High and Whisker Low Cols
+
+Happiness <- Happiness[, -c(4,5)]
+
+#Adding the Continent Column as the last col in the dataset
+Happiness$Continent <- NA
+Happiness$Continent[which(Happiness$Country %in% c("Israel", "United Arab Emirates", "Singapore", "Thailand", "Taiwan Province of China",
+                                                   "Qatar", "Saudi Arabia", "Kuwait", "Bahrain", "Malaysia", "Uzbekistan", "Japan",
+                                                   "South Korea", "Turkmenistan", "Kazakhstan", "Turkey", "Hong Kong S.A.R., China", "Philippines",
+                                                   "Jordan", "China", "Pakistan", "Indonesia", "Azerbaijan", "Lebanon", "Vietnam",
+                                                   "Tajikistan", "Bhutan", "Kyrgyzstan", "Nepal", "Mongolia", "Palestinian Territories",
+                                                   "Iran", "Bangladesh", "Myanmar", "Iraq", "Sri Lanka", "Armenia", "India", "Georgia",
+                                                   "Cambodia", "Afghanistan", "Yemen", "Syria"))] <- "Asia"
+Happiness$Continent[which(Happiness$Country %in% c("Norway", "Denmark", "Iceland", "Switzerland", "Finland",
+                                                   "Netherlands", "Sweden", "Austria", "Ireland", "Germany",
+                                                   "Belgium", "Luxembourg", "United Kingdom", "Czech Republic",
+                                                   "Malta", "France", "Spain", "Slovakia", "Poland", "Italy",
+                                                   "Russia", "Lithuania", "Latvia", "Moldova", "Romania",
+                                                   "Slovenia", "North Cyprus", "Cyprus", "Estonia", "Belarus",
+                                                   "Serbia", "Hungary", "Croatia", "Kosovo", "Montenegro",
+                                                   "Greece", "Portugal", "Bosnia and Herzegovina", "Macedonia",
+                                                   "Bulgaria", "Albania", "Ukraine"))] <- "Europe"
+Happiness$Continent[which(Happiness$Country %in% c("Canada", "Costa Rica", "United States", "Mexico",  
+                                                   "Panama","Trinidad and Tobago", "El Salvador", "Belize", "Guatemala",
+                                                   "Jamaica", "Nicaragua", "Dominican Republic", "Honduras",
+                                                   "Haiti"))] <- "North America"
+Happiness$Continent[which(Happiness$Country %in% c("Chile", "Brazil", "Argentina", "Uruguay",
+                                                   "Colombia", "Ecuador", "Bolivia", "Peru",
+                                                   "Paraguay", "Venezuela"))] <- "South America"
+Happiness$Continent[which(Happiness$Country %in% c("New Zealand", "Australia"))] <- "Australia"
+Happiness$Continent[which(is.na(Happiness$Continent))] <- "Africa"
+
+#Making the Continent as the 2nd Col in the Dataframe
+Happiness <- Happiness %>% select(Country,Continent, everything())
+
+#Changing the Continent Col Values as Factors
+Happiness$Continent <- as.factor(Happiness$Continent)
+
+```
+
+
+```{r, include=FALSE}
+
+####################### SPLITTING DATASET into Train and Test #######################
+
+set.seed(123)
+dataset <- Happiness[4:11]
+
+split = sample.split(dataset$Economy, SplitRatio = 0.8)
+
+training_set = subset(dataset, split == TRUE)
+test_set = subset(dataset, split == FALSE)
+
+regressor_lm = lm(formula = Happiness.Score ~ .,data = training_set)
+```
+
+```{r}
+summary(regressor_lm)
+```
+
+
+So as seen above, all the features or corfficients and *** beside them. Thus I changed my research question to how ECONOMY GDP effected by the features. 
+
+#Computational Methodologies Used
+
+1. Multiple Linear Regression 
+
+* This is used since the its is a regression problem and Linear Regression cannot be used until the problem is converted to a classification problem. 
+* This model acts as a baseline to find correlation between ECONOMY with the feature space.
+
+2. Support Vector Regression (SVR)
+
+* This model is implemented to outperform the Multiple Linear Regression Model to predict the dependent variable (Economy) by using the independent variables.
+* SVR is a good choice since it works well with small feature space and have faster execution times since it only stores the support vectors.
+
+#Computational Methodologies Implementation
+
+1. **Multiple Linear Regression**
+
+```{r, include=FALSE}
+
+####################### SPLITTING DATASET into Train and Test #######################
+
+set.seed(123)
+dataset <- Happiness[5:11]
+
+split = sample.split(dataset$Economy, SplitRatio = 0.8)
+
+training_set = subset(dataset, split == TRUE)
+test_set = subset(dataset, split == FALSE)
+```
+
+* Feature Selection and Model Summary
+
+```{r}
+regressor_lm = lm(formula = Economy ~ .,data = training_set)
+
+#Applying Backward Elimination on Multiple Linear Regression by having 
+#Significance Level = 0.001.
+#IV with P value > Significance Level are removed.
+
+regressor_lm = lm(formula = Economy ~ Family + Life.Expectancy + Trust,data = training_set) 
+
+#Only kept Family, Life Expectance and Trust since their P values < Significance Level
+
+regressor_lm = lm(formula = Economy ~ Family + Life.Expectancy,
+                  data = training_set)
+
+#Removed Trust since P value was 0.00468 > 0.001 (Significance Value)
+summary(regressor_lm)
+```
+
+```{r, include=FALSE}
+#Prediction Values
+y_pred_lm = predict(regressor_lm, newdata = test_set, type="response")
+
+Pred_Actual_lm <- as.data.frame(cbind(Prediction = y_pred_lm, Actual = test_set$Economy))
+```
+
+***
+
+* Correlation Graph between Actual and Predicted Values
+```{r}
+gg.lm <- ggplot(Pred_Actual_lm, aes(Actual, Prediction )) +
+  geom_point() + theme_bw() + geom_abline() +
+  labs(title = "Multiple Linear Regression", x = "Actual Economy",
+       y = "Predicted Economy")
+gg.lm
+```
+
+The above graph shows the correlation between the predicted values and the regression line which has been plotted based on True Values. According to the graph, the predicted values for Economy around 0.4 have the highest error. The cause of this is the amount of data that corresponds to low economy values. Most of the data has Economy values above 0.9 (Mean of Economy Column).
+
+***
+
+* Prediction and Actual Value Comparison by converting the Regression to Binary Class Classification Problem
+
+```{r}
+y_pred_lm = predict(regressor_lm, newdata = test_set, type="response")
+
+threshold <- mean(Happiness$Economy)
+
+y <- ifelse(Pred_Actual_lm[,1] > threshold, 1, 0)
+
+Pred_Actual_lm_binary <- as.data.frame(cbind(Economy_Pred = y, 
+                         Family = test_set$Family, 
+                         Life.Expectancy = Happiness$Life.Expectancy))
+
+p1<-ggplot(data = Pred_Actual_lm_binary,
+           aes(Family,Life.Expectancy,col=Economy_Pred))+geom_point(alpha=1)
+p1
+```
+
+
+The above graph shows the distribution of datapoints colorcoded with respect to the ECONOMY GDP value being **1** if more than mean value and ECONOMY GDP value being **0** if less than mean value.From the graph, it is evident that Economy values are below average if Family value is low. But most of the above average Economy values are present in the section where the Life.Expectancy and Family, both have significantly higher values.
+
+2. **Support Vector Regression**
+
+* Model Summary
+```{r, include=FALSE}
+regressor_svr = svm(formula = Economy ~ .,
+                data = dataset,
+                type = 'eps-regression',
+                kernel = 'radial')
+y_pred_svr = predict(regressor_svr,  newdata = test_set)
+
+Pred_Actual_svr <- as.data.frame(cbind(Prediction = y_pred_svr, Actual = test_set$Economy))
+```
+
+```{r}
+summary(regressor_svr)
+```
+
+***
+
+* Correlation Graph between Actual and Predicted Values
+
+```{r}
+gg.svr <- ggplot(Pred_Actual_svr, aes(Actual, Prediction )) +
+  geom_point() + theme_bw() + geom_abline() +
+  labs(title = "SVR", x = "Actual happiness score",
+       y = "Predicted happiness score") 
+gg.svr
+```
+
+The above graph shows the correlation between the predicted values and the regression line which has been plotted based on True Values. Similar to Multiple Linear Regression Correlation Plot, the predicted values for Economy around 0.4 have the highest error. The cause of this is the amount of data that corresponds to low economy values. Most of the data has Economy values above 0.9 (Mean of Economy Column) but now have less error as compared to the Multiple Linear Regression Correlation Plot.
+
+***
+
+* Prediction and Actual Value Comparison by converting the Regression to Binary Class Classification Problem
+
+```{r, include=FALSE}
+regressor_svr = svm(formula = Economy ~ Family + Life.Expectancy,
+                data = dataset,
+                type = 'eps-regression',
+                kernel = 'radial')
+y_pred_svr = predict(regressor_svr,  newdata = test_set)
+```
+
+```{r}
+Pred_Actual_svr <- as.data.frame(cbind(Prediction = y_pred_svr, Actual = test_set$Economy))
+
+threshold <- mean(Happiness$Economy)
+
+y <- ifelse(Pred_Actual_svr[,1] > threshold, 1, 0)
+
+Pred_Actual_lm_binary <- as.data.frame(cbind(Economy_Pred = y, Family = test_set$Family, 
+                                             Life.Expectancy = Happiness$Life.Expectancy))
+
+p1<-ggplot(data = Pred_Actual_lm_binary,
+           aes(Family,Life.Expectancy,col=Economy_Pred))+geom_point(alpha=1)
+p1
+```
+
+
+The above graph shows the distribution of datapoints colorcoded with respect to the ECONOMY GDP value being **1** if more than mean value and ECONOMY GDP value being **0** if less than mean value. From the graph, it is evident that Economy values are below average if Family value is low. Even now, most of the above average values are in the section where the Life.Expectancy and Family values are high. Difference between the above graph with the Multiple Linear Regression is, that there are more below average Economy value datapoints in the region with High Family value.
+
+#Validation Statistics
+
+##Multiple Linear Regression
+```{r}
+print (paste0("R Squared = " ,summary(regressor_lm)$r.squared))
+```
+
+R Squared is a statistical measure of how well the data is fitted to the regression line. More the R Sqaured value, better is the fit.
+
+```{r}
+print (paste0("Adjusted R Squared = " ,summary(regressor_lm)$adj.r.squared))
+```
+
+Adjusted R Squared is a modified verison of R Squared and is adjusted based on the number of predictors. The values only increases if a new significant predictor is added to the model. More the Value, better is the fit of datapoints on the regression line.
+
+##Support Vector Regression
+
+```{r, include=FALSE}
+regressor_svr = svm(formula = Economy ~ .,
+                data = dataset,
+                type = 'eps-regression',
+                kernel = 'radial')
+y_pred_svr = predict(regressor_svr,  newdata = test_set)
+
+Pred_Actual_svr <- as.data.frame(cbind(Prediction = y_pred_svr, Actual = test_set$Economy))
+```
+
+```{r}
+RMSE_svr=rmse(Pred_Actual_svr[,1],Pred_Actual_svr[,2])
+print (paste0("Root Mean Squared Error = ", RMSE_svr))
+```
+
+RMSE (Root Mean Squared Error) is a measure of the amount of error between the True and Predicted Values in the regression problem. Less the value, less is the error, better the predictions.
+
+#Limitation of Computational Methodologies Used
+
+* Multiple Linear Regression is a good machine learning model for regression. But it is not able to predict accurate values when the training data is less.
+
+* SVR outperforms Multiple Linear Regression since, it is a deterministic model, which means that there is no randomness in the machine learning pipeline. Multiple Linear Regression is a probabilistic model and may provide different results from identical initial states.
+
+* SVR is a better predictor when the feature space is less. But when the dimensionality of the dataset increases, it starts loosing its abilities to predict accurate values. 
